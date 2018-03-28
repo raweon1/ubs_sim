@@ -11,10 +11,11 @@ import json
 
 
 def foo():
+    offset = 987654321
     seed = 123456789
     while True:
         p = Path("talker", "switch", "listener")
-        f = Flow(1, p, 500, 1500)
+        f = Flow(1, p, 200, 1500)
         f2 = Flow(2, p, 350, 1500)
 
         sim_env = SimulationEnvironment("test", seed)
@@ -37,8 +38,8 @@ def foo():
         sim_env.topology = t
         t.multi_connect("switch", 1000, "talker", "listener", "talker2")
 
-        seed *= 2
+        seed += offset
         yield sim_env
 
 
-simulate_multiple(foo(), 3, 100, "test")
+simulate_multiple(foo(), 3, 10000, "test")

@@ -44,7 +44,7 @@ class UBSScheduler(Scheduler):
         :param env:
         :param bandwidth:
         :param priority_map:
-        :param mode: should be "LRQ" or "TBE"
+        :param mode: should be "lrq", "tbe", "shapeless"; lrq is selected when mode is neither
         :param monitor:
         """
         super(UBSScheduler, self).__init__(env, bandwidth, priority_map, monitor)
@@ -56,6 +56,7 @@ class UBSScheduler(Scheduler):
         self.pseudo_queues = defaultdict(deque)
         self.shaped_queues = defaultdict(deque)
         self.process_shaped_queues = dict()
+        # shaped queue sleeping or not
         self.process_shaped_queues_state = dict()
 
     def get_data(self) -> list:
@@ -111,6 +112,9 @@ class UBSScheduler(Scheduler):
             if self.mode == "tbe":
                 self.process_shaped_queues[shaped_queue_index] = self.env.process(
                     self.process_shaped_queue_tbe(shaped_queue, pseudo_queue, shaped_queue_index))
+            elif self.mode == "shapeless":
+                self.process_shaped_queues[shaped_queue_index] = self.env.process(
+                    self.process_shaped_queue_shapeless(shaped_queue, pseudo_queue, shaped_queue_index))
             else:
                 self.process_shaped_queues[shaped_queue_index] = self.env.process(
                     self.process_shaped_queue_lrq(shaped_queue, pseudo_queue, shaped_queue_index))
@@ -144,7 +148,7 @@ class UBSScheduler(Scheduler):
                 except Interrupt:
                     self.process_shaped_queues_state[shaped_queue_index] = False
 
-    def process_shaped_queue_tbe(self, shaped_queue: deque, pseudo_queue: deque, pseudo_queue_index: str):
+    def process_shaped_queue_tbe(self, shaped_queue: deque, pseudo_queue: deque, shaped_queue_index: str):
         time_state = defaultdict(int)
         burst_state = dict()
         while True:
@@ -161,13 +165,30 @@ class UBSScheduler(Scheduler):
                     burst_state[flow_index] = burstiness
                     burst = burst_state[flow_index]
                 if not burst + (self.env.now - time) * leaky_rate >= frame_bit_len:
+                    # print((frame_bit_len - (burst + (self.env.now - time) * leaky_rate)) / leaky_rate)
                     yield self.env.timeout((frame_bit_len - (burst + (self.env.now - time) * leaky_rate)) / leaky_rate)
                 self.pseudo_queue_append(pseudo_queue, frame)
                 burst_state[flow_index] = min(burstiness, burst + (self.env.now - time) * leaky_rate) - frame_bit_len
+                # if burst_state[flow_index] < -10:
+                #   print(round(burst_state[flow_index], 2))
+                #   print("%f %f %f %f" % (burst, (self.env.now - time) * leaky_rate, frame_bit_len, frame_bit_len / 8))
                 time_state[flow_index] = self.env.now
             else:
                 try:
-                    self.process_shaped_queues_state[pseudo_queue_index] = True
+                    self.process_shaped_queues_state[shaped_queue_index] = True
                     yield self.sleep_event
                 except Interrupt:
-                    self.process_shaped_queues_state[pseudo_queue_index] = False
+                    self.process_shaped_queues_state[shaped_queue_index] = False
+
+    def process_shaped_queue_shapeless(self, shaped_queue: deque, pseudo_queue: deque, shaped_queue_index: str):
+        # no shaping, frame is directly send to the pseudo_queue
+        while True:
+            if shaped_queue.__len__() > 0:
+                frame: Frame = shaped_queue.popleft()
+                self.pseudo_queue_append(pseudo_queue, frame)
+            else:
+                try:
+                    self.process_shaped_queues_state[shaped_queue_index] = True
+                    yield self.sleep_event
+                except Interrupt:
+                    self.process_shaped_queues_state[shaped_queue_index] = False

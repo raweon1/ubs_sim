@@ -119,7 +119,7 @@ class SimulationEnvironment(Environment):
 
     id = dict()
 
-    def __init__(self, name: str = "no_name", seed: int = None, verbose: bool = True, *args, **kwargs):
+    def __init__(self, name: str = "no_name", seed: int = None, verbose: bool = False, *args, **kwargs):
         """
         :param topology: Topology of the Network
         :param name: Name of this specific Simulation
