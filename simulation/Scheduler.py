@@ -51,8 +51,7 @@ class UBSScheduler(Scheduler):
         self.mode = mode
 
         self.data = dict()
-        self.shaped_queue_data = list()
-        self.pseudo_queue_data = list()
+        self.queue_data = defaultdict(list)
 
         self.sleep_event = env.event()
 
@@ -66,12 +65,28 @@ class UBSScheduler(Scheduler):
         result = list()
         for frame_id, frame_dict in self.data.items():
             result.append(frame_dict)
-        return result, self.shaped_queue_data + self.pseudo_queue_data
+        queue_data_list = list()
+        for queue_data in self.queue_data.values():
+            queue_data_list += queue_data
+        return result, queue_data_list
+
+    def add_queue_data(self, queue_type: str, queue: deque, queue_index: str):
+        queue_byte_len = self.get_queue_byte_len(queue)
+        data_list = self.queue_data[queue_index]
+        try:
+            if data_list[-1]["byte_length"] == queue_byte_len:
+                data_list[-1]["until"] = self.env.now
+            else:
+                data_list.append({"queue_type": queue_type, "queue": queue_index,
+                                  "since": data_list[-1]["until"], "until": self.env.now,
+                                  "frames": queue.__len__(), "byte_length": queue_byte_len})
+        except IndexError:
+            data_list.append({"queue_type": queue_type, "queue": queue_index, "since": 0, "until": self.env.now,
+                              "frames": queue.__len__(), "byte_length": queue_byte_len})
 
     def end_transmission(self, frame: Frame):
         for traffic_class, pseudo_queue in reversed(sorted(self.pseudo_queues.items())):
             if frame in pseudo_queue:
-                pseudo_queue.remove(frame)
                 if self.monitor:
                     frame_dict = self.data[frame.id]
                     frame_dict["forwarding_time"] = self.env.now
@@ -80,11 +95,8 @@ class UBSScheduler(Scheduler):
                     frame_dict["shaped_queue_delay"] = frame_dict["pseudo_queue_time"] - frame_dict["arrival_time"]
                     frame_dict["pseudo_queue_delay"] = frame_dict["queue_delay"] - frame_dict["shaped_queue_delay"]
 
-                    since = 0 if self.pseudo_queue_data.__len__() == 0 else self.pseudo_queue_data[-1]["until"]
-                    self.pseudo_queue_data.append({"queue_type": "pseudo", "queue": traffic_class,
-                                                   "since": since, "until": self.env.now,
-                                                   "frames": pseudo_queue.__len__(),
-                                                   "byte_length": self.get_queue_byte_len(pseudo_queue)})
+                    self.add_queue_data("pseudo", pseudo_queue, traffic_class)
+                pseudo_queue.remove(frame)
                 break
 
     def peek_frame(self):
@@ -116,8 +128,6 @@ class UBSScheduler(Scheduler):
         # gets the shaped_queue associated to this traffic_class and sender; if there is none it is created
         shaped_queue: deque = self.shaped_queues[shaped_queue_index]
 
-        # add the frame to the shaped_queue
-        shaped_queue.append(frame)
         # add frame to data
         if self.monitor:
             frame_dict = {"mode": self.mode,
@@ -130,10 +140,7 @@ class UBSScheduler(Scheduler):
                 raise RuntimeError("frame id not unique")
             self.data[frame.id] = frame_dict
 
-            since = 0 if self.shaped_queue_data.__len__() == 0 else self.shaped_queue_data[-1]["until"]
-            self.shaped_queue_data.append({"queue_type": "shaped", "queue": shaped_queue_index,
-                                           "since": since, "until": self.env.now, "frames": shaped_queue.__len__(),
-                                           "byte_length": self.get_queue_byte_len(shaped_queue)})
+            self.add_queue_data("shaped", shaped_queue, shaped_queue_index)
 
         # if there is no process for this shaped_queue, create one
         if shaped_queue_index not in self.process_shaped_queues:
@@ -152,25 +159,22 @@ class UBSScheduler(Scheduler):
             # state of this process, True = sleeping, False = not sleeping
             self.process_shaped_queues_state[shaped_queue_index] = False
 
+        # add the frame to the shaped_queue
+        shaped_queue.append(frame)
+
         # if process is sleeping, interrupt
         if self.process_shaped_queues_state[shaped_queue_index]:
             self.process_shaped_queues[shaped_queue_index].interrupt("new frame")
 
     def pseudo_queue_append(self, shaped_queue_index: str, shaped_queue: deque,
                             pseudo_queue: deque, pseudo_queue_index: str, frame: Frame):
-        pseudo_queue.append(frame)
         if self.monitor:
             self.data[frame.id]["pseudo_queue_time"] = self.env.now
 
-            since = 0 if self.shaped_queue_data.__len__() == 0 else self.shaped_queue_data[-1]["until"]
-            self.shaped_queue_data.append({"queue_type": "shaped", "queue": shaped_queue_index,
-                                           "since": since, "until": self.env.now, "frames": shaped_queue.__len__(),
-                                           "byte_length": self.get_queue_byte_len(shaped_queue)})
+            self.add_queue_data("shaped", shaped_queue, shaped_queue_index)
+            self.add_queue_data("pseudo", pseudo_queue, pseudo_queue_index)
 
-            since = 0 if self.pseudo_queue_data.__len__() == 0 else self.pseudo_queue_data[-1]["until"]
-            self.pseudo_queue_data.append({"queue_type": "pseudo", "queue": pseudo_queue_index,
-                                           "since": since, "until": self.env.now, "frames": pseudo_queue.__len__(),
-                                           "byte_length": self.get_queue_byte_len(pseudo_queue)})
+        pseudo_queue.append(frame)
         self.egress_process.interrupt("new frame")
 
     def process_shaped_queue_lrq(self, shaped_queue: deque, pseudo_queue: deque,

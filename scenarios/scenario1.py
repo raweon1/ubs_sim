@@ -23,15 +23,15 @@ def foo():
         p3 = Path("talker3", "switch1", "switch2", "listener")
         p4 = Path("talker4", "switch1", "switch2", "listener")
 
-        flow_rates = [0.075, 0.025, 0.052, 0.07,
-                      0.035, 0.095, 0.125, 0.013,
-                      0.123, 0.036, 0.092, 0.027,
-                      0.012, 0.098, 0.075, 0.046]
-
         flow_rates = [0.06, 0.06, 0.06, 0.06,
                       0.06, 0.06, 0.06, 0.06,
                       0.06, 0.06, 0.06, 0.06,
                       0.06, 0.06, 0.06, 0.06]
+
+        flow_rates = [0.075, 0.025, 0.052, 0.07,
+                      0.035, 0.095, 0.125, 0.013,
+                      0.123, 0.036, 0.092, 0.027,
+                      0.012, 0.098, 0.075, 0.046]
 
         burstiness = 3000
 
@@ -82,7 +82,7 @@ def foo():
 
         priority_map = PriorityMap(1)
         switch1 = UBSSwitch(sim_env, "switch1", priority_map, "lrq", True)
-        switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "tbe", True)
+        switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "lrq", False)
 
         listener = Listener(sim_env, "listener")
 
@@ -95,4 +95,4 @@ def foo():
         yield sim_env
 
 
-simulate_multiple(foo(), 16, 100000, "scenario1")
+simulate_multiple(foo(), 16, 50000, "scenario1")
