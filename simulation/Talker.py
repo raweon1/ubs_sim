@@ -23,7 +23,7 @@ class Talker(Node):
 
         self.data = list()
 
-    def get_data(self) -> (list, str):
+    def get_data(self) -> list((list, str)):
         if self.monitor:
             result = list()
             for frame in self.data:
@@ -41,7 +41,7 @@ class Talker(Node):
                                       "start_time": frame.start_time, "arrival_time": frame.start_time + delay,
                                       "delay": delay}
                         result.append(frame_dict)
-            return result, "talker"
+            return [(result, "talker")]
         else:
             return None, None
 
@@ -111,7 +111,7 @@ class TokenBucketTalker(Node):
             self.process_flow_create_frame(flow, priority, payload_generator, time_generator))
         self.data = list()
 
-    def get_data(self) -> (list, str):
+    def get_data(self) -> list((list, str)):
         if self.monitor:
             result = list()
             for frame in self.data:
@@ -129,7 +129,7 @@ class TokenBucketTalker(Node):
                                       "start_time": frame.start_time, "arrival_time": frame.start_time + delay,
                                       "delay": delay}
                         result.append(frame_dict)
-            return result, "talker"
+            return [(result, "talker")]
         else:
             return None, None
 

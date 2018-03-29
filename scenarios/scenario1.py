@@ -1,6 +1,6 @@
 from simulation.Core import SimulationEnvironment, Topology
 from simulation.Talker import Talker
-from simulation.Switch import UBSSwitch
+from simulation.Switch import UBSSwitch, UBSSwitch2
 from simulation.PriorityMap import PriorityMap
 from simulation.Path import Path
 from simulation.Flow import Flow
@@ -15,7 +15,7 @@ def payload_gen(sim_env: SimulationEnvironment, mean):
 
 
 def foo():
-    offset = 987654321
+    offset = 54321
     seed = 123456789
     while True:
         p1 = Path("talker1", "switch1", "switch2", "listener")
@@ -27,6 +27,11 @@ def foo():
                       0.035, 0.095, 0.125, 0.013,
                       0.123, 0.036, 0.092, 0.027,
                       0.012, 0.098, 0.075, 0.046]
+
+        flow_rates = [0.06, 0.06, 0.06, 0.06,
+                      0.06, 0.06, 0.06, 0.06,
+                      0.06, 0.06, 0.06, 0.06,
+                      0.06, 0.06, 0.06, 0.06]
 
         burstiness = 3000
 
@@ -75,9 +80,9 @@ def foo():
         talker4.add_flow(f15, 0, payload_generator)
         talker4.add_flow(f16, 0, payload_generator)
 
-        priority_map = PriorityMap(2)
+        priority_map = PriorityMap(1)
         switch1 = UBSSwitch(sim_env, "switch1", priority_map, "lrq", True)
-        switch2 = UBSSwitch(sim_env, "switch2", priority_map, "tbe", True)
+        switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "tbe", True)
 
         listener = Listener(sim_env, "listener")
 
@@ -90,4 +95,4 @@ def foo():
         yield sim_env
 
 
-simulate_multiple(foo(), 3, 10000, "scenario1")
+simulate_multiple(foo(), 16, 100000, "scenario1")

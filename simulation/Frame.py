@@ -16,6 +16,8 @@ class Frame(object):
         self.header = header
         self.flow = flow
 
+        # value which stores the last traffic class used to send this frame (UBS needs this)
+        self.traffic_class = priority
         self.start_time = -1
         self.delays = dict()
 

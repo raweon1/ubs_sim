@@ -147,11 +147,12 @@ class SimulationEnvironment(Environment):
         results = defaultdict(list)
         for node_address, node in self.topology.nodes.items():
             if node.monitor:
-                node_result_list, dict_format = node.get_data()
-                for frame_dict in node_result_list:
-                    tmp_dict = {"sim_name": self.name, "sim_id": self.id, "seed": self.seed}
-                    tmp_dict.update(frame_dict)
-                    results[dict_format].append(tmp_dict)
+                node_results = node.get_data()
+                for node_result_list, dict_format in node_results:
+                    for frame_dict in node_result_list:
+                        tmp_dict = {"sim_name": self.name, "sim_id": self.id, "seed": self.seed}
+                        tmp_dict.update(frame_dict)
+                        results[dict_format].append(tmp_dict)
         return results
 
     def sim_print(self, msg):

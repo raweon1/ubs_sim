@@ -51,4 +51,4 @@ def foo(exp_mean):
 
 
 # simulate_multiple(foo(500), 3, 10000, "token_bucket_test")
-simulate_multiple_multiple([foo(500), foo(300), foo(200), foo(125), foo(100), foo(75), foo(50)], 15, 1000000, "token_bucket_test")
+simulate_multiple_multiple([foo(500), foo(300), foo(200), foo(125), foo(100), foo(75), foo(50)], 15, 100000, "token_bucket_test")

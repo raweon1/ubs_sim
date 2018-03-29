@@ -26,21 +26,31 @@ class Node(object):
         """
         self.on_frame_received(frame, sender)
 
-    def send_frame(self, receiver_address: str, frame: Frame, extra_bits: int = 0) -> Sending:
+    def send_frame(self, receiver_address: str, frame: Frame,
+                   extra_bits: int = 0, traffic_class: int = None) -> Sending:
         """
         call to send a frame from this node to receiver_address
         :param receiver_address:
         :param frame:
         :param extra_bits:
+        :param traffic_class: traffic class in which this frame is send (will be saved in frame), if not specified
+        frame.priority is used. important for UBS
         :return: Sending object
         """
         # Zeitpunkt zu dem der Frame zum ersten mal gesendet wird
         if frame.start_time < 0:
             frame.start_time = self.env.now
+        if traffic_class is not None:
+            frame.traffic_class = traffic_class
+        else:
+            frame.traffic_class = frame.priority
         sending_object: Sending = self.env.send_frame(self.address, receiver_address, frame, extra_bits)
         return sending_object
 
-    def get_data(self) -> (list, str):
+    def get_data(self) -> list((list, str)):
+        """
+        returns a list of 2 tuples. each tuple contains a list of dicts (table) and a str (name of the table)
+        """
         pass
 
 
