@@ -16,6 +16,7 @@ def mk_result_dir(filename: str, offset: int = 0):
 
 
 def write_to_csv(result: dict, filename: str):
+    print("Writing CSV")
     try:
         os.mkdir("results")
     except FileExistsError:
@@ -36,6 +37,7 @@ def simulate_multiple(sim_generator, count: int, runtime: int, file_name: str = 
         sim_env: SimulationEnvironment = sim_generator.__next__()
         sim_env.run(runtime)
         sim_result: dict = sim_env.get_data()
+        print("Simulation %d/%d done" % (i + 1, count))
         for dict_format, frame_list in sim_result.items():
             result[dict_format] += frame_list
     if file_name is not None:
@@ -45,8 +47,11 @@ def simulate_multiple(sim_generator, count: int, runtime: int, file_name: str = 
 
 def simulate_multiple_multiple(sim_generator_list: list, count: int, runtime: int, file_name: str = None):
     result = defaultdict(list)
+    i = 1
     for sim_generator in sim_generator_list:
         sim_result: dict = simulate_multiple(sim_generator, count, runtime)
+        print("Simulation %d done" % i)
+        i += 1
         for dict_format, frame_list in sim_result.items():
             result[dict_format] += frame_list
     if file_name is not None:

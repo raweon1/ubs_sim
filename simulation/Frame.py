@@ -2,7 +2,7 @@ from simulation import Flow
 
 
 class Frame(object):
-    def __init__(self, frame_id: int, flow: Flow, payload: int, priority: int, header: int = 26):
+    def __init__(self, frame_id: int, flow: Flow, payload: int, priority: int, header: int = 0):
         """
         :param frame_id:
         :param flow:

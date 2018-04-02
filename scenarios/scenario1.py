@@ -80,7 +80,7 @@ def foo():
         talker4.add_flow(f15, 0, payload_generator)
         talker4.add_flow(f16, 0, payload_generator)
 
-        priority_map = PriorityMap(1)
+        priority_map = PriorityMap(8)
         switch1 = UBSSwitch(sim_env, "switch1", priority_map, "lrq", True)
         switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "lrq", False)
 
