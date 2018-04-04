@@ -199,3 +199,27 @@ class TokenBucketTalker(Node):
                 self.sleeping = False
                 self.send_process.interrupt("new frame")
             yield self.env.timeout(time_generator.__next__())
+
+
+class UnshapedTalker(TokenBucketTalker):
+    def __init__(self, env: SimulationEnvironment, address: str, flow: Flow, priority: int,
+                 payload_generator, time_generator, monitor: bool = False):
+        super(UnshapedTalker, self).__init__(env, address, flow, priority, payload_generator, time_generator, monitor)
+
+    def process_send_frame(self):
+        while True:
+            if self.queue.__len__() > 0:
+                frame = self.queue.popleft()
+
+                if self.monitor:
+                    self.data.append(frame)
+                receiver_address = frame.flow.path[self.address][0]
+                sending_object = self.send_frame(receiver_address, frame)
+                yield sending_object.process
+                self.env.sim_print("send frame")
+            else:
+                self.sleeping = True
+                try:
+                    yield self.sleep_event
+                except Interrupt:
+                    self.sleeping = False

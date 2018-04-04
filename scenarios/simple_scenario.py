@@ -1,5 +1,5 @@
 from simulation.Core import SimulationEnvironment, Topology
-from simulation.Talker import Talker, TokenBucketTalker
+from simulation.Talker import Talker, TokenBucketTalker, UnshapedTalker
 from simulation.Switch import UBSSwitch, UBSSwitch2
 from simulation.PriorityMap import PriorityMap
 from simulation.Path import Path
@@ -21,7 +21,7 @@ def payload_gen(sim_env: SimulationEnvironment, mean):
         yield round(rnd.uniform(2, mean * 2 - 2))
 
 
-def foo(high_priority_leaky_rate, switch_mode):
+def foo(arrival_mode, high_priority_leaky_rate, switch_mode):
     """
     Scenario with two Leaky-Bucket talker with 2 Flows with different priorities.
     Higher priority Flow uses high_priority_leaky_rate% bandwidth, the other 0.999 * (1 - high_priority_leaky_rate)
@@ -44,7 +44,7 @@ def foo(high_priority_leaky_rate, switch_mode):
     seed = 48544
     while True:
         # 1.
-        sim_env = SimulationEnvironment("%f-%s" % (high_priority_leaky_rate, switch_mode), seed)
+        sim_env = SimulationEnvironment("%s-%0.2f-%s" % (arrival_mode, high_priority_leaky_rate, switch_mode), seed)
 
         # 2.
         path1 = Path("talker1", "switch", "listener")
@@ -53,7 +53,7 @@ def foo(high_priority_leaky_rate, switch_mode):
         bandwidth = 1000
         burstiness = 3000
 
-        leaky_rate_high = bandwidth * (high_priority_leaky_rate + 0.1)
+        leaky_rate_high = bandwidth * (high_priority_leaky_rate - 0)
         leaky_rate_low = bandwidth * (1 - high_priority_leaky_rate)
         flow_high = Flow(1, path1, leaky_rate_high, burstiness)
         flow_low = Flow(2, path2, leaky_rate_low, burstiness)
@@ -62,13 +62,23 @@ def foo(high_priority_leaky_rate, switch_mode):
         mean_payload = 750
         payload_generator = payload_gen(sim_env, mean_payload)
 
-        #talker1 = Talker(sim_env, "talker1", True)
-        #talker1.add_flow(flow_high, 3, payload_generator)
-        talker1 = TokenBucketTalker(sim_env, "talker1", flow_high, 3, payload_generator, time_gen(leaky_rate_high, mean_payload, sim_env), True)
-        talker2 = TokenBucketTalker(sim_env, "talker2", flow_low, 2, payload_generator, time_gen(leaky_rate_low, mean_payload, sim_env), True)
-        #talker2 = Talker(sim_env, "talker2", True)
-        #if high_priority_leaky_rate < 0.999:
-        #    talker2.add_flow(flow_low, 2, payload_generator)
+        if arrival_mode == "lrq":
+            talker1 = Talker(sim_env, "talker1", True)
+            if leaky_rate_high > 0:
+                talker1.add_flow(flow_high, 3, payload_generator)
+            talker2 = Talker(sim_env, "talker2", True)
+            if leaky_rate_low > 0:
+                talker2.add_flow(flow_low, 2, payload_generator)
+        elif arrival_mode == "tbe":
+            talker1 = TokenBucketTalker(sim_env, "talker1", flow_high, 3, payload_generator,
+                                        time_gen(leaky_rate_high, mean_payload, sim_env), True)
+            talker2 = TokenBucketTalker(sim_env, "talker2", flow_low, 2, payload_generator,
+                                        time_gen(leaky_rate_low, mean_payload, sim_env), True)
+        else:
+            talker1 = UnshapedTalker(sim_env, "talker1", flow_high, 3, payload_generator,
+                                     time_gen(leaky_rate_high, mean_payload, sim_env), True)
+            talker2 = UnshapedTalker(sim_env, "talker2", flow_low, 2, payload_generator,
+                                     time_gen(leaky_rate_low, mean_payload, sim_env), True)
 
         priority_map = PriorityMap(8)
         switch = UBSSwitch(sim_env, "switch", priority_map, switch_mode, True)
@@ -89,7 +99,12 @@ def foo(high_priority_leaky_rate, switch_mode):
         yield sim_env
 
 
-simulate_multiple(foo(0.5, "lrq"), 13, 35000, "simple")
+#simulate_multiple(foo("tbe", 0.5, "tbe"), 10, 100000, "simple")
+
+arr_mode = "shapeless"
+simulate_multiple_multiple([foo(arr_mode, 0.5, "lrq"),
+                            foo(arr_mode, 0.5, "tbe"),
+                            foo(arr_mode, 0.5, "shapeless")], 10, 100000, "simple_%s" % arr_mode)
 # simulate_multiple_multiple([foo(0.1, "lrq"),
 #                            foo(0.2, "lrq"),
 #                            foo(0.3, "lrq"),
