@@ -7,6 +7,9 @@ from simulation.Flow import Flow
 from simulation.Node import Listener
 from simulation.Wrapper import simulate_multiple, simulate_multiple_multiple
 
+import numpy as np
+from sys import maxsize
+
 
 def time_gen(leaky_rate, mean_frame_len, sim_env: SimulationEnvironment):
     rnd_state = sim_env.random
@@ -40,8 +43,7 @@ def foo(arrival_mode, high_priority_leaky_rate, switch_mode):
     optional: use a specific seed and change it before yield statement
     """
 
-    offset = 4546
-    seed = 48544
+    seed = np.random.randint(maxsize)
     while True:
         # 1.
         sim_env = SimulationEnvironment("%s-%0.2f-%s" % (arrival_mode, high_priority_leaky_rate, switch_mode), seed)
@@ -54,7 +56,7 @@ def foo(arrival_mode, high_priority_leaky_rate, switch_mode):
         burstiness = 3000
 
         leaky_rate_high = bandwidth * (high_priority_leaky_rate - 0)
-        leaky_rate_low = bandwidth * (1 - high_priority_leaky_rate)
+        leaky_rate_low = bandwidth * ((1 - high_priority_leaky_rate) - 0)
         flow_high = Flow(1, path1, leaky_rate_high, burstiness)
         flow_low = Flow(2, path2, leaky_rate_low, burstiness)
 
@@ -70,10 +72,16 @@ def foo(arrival_mode, high_priority_leaky_rate, switch_mode):
             if leaky_rate_low > 0:
                 talker2.add_flow(flow_low, 2, payload_generator)
         elif arrival_mode == "tbe":
-            talker1 = TokenBucketTalker(sim_env, "talker1", flow_high, 3, payload_generator,
-                                        time_gen(leaky_rate_high, mean_payload, sim_env), True)
-            talker2 = TokenBucketTalker(sim_env, "talker2", flow_low, 2, payload_generator,
-                                        time_gen(leaky_rate_low, mean_payload, sim_env), True)
+            if leaky_rate_high > 0:
+                talker1 = TokenBucketTalker(sim_env, "talker1", flow_high, 3, payload_generator,
+                                            time_gen(leaky_rate_high, mean_payload, sim_env), True)
+            else:
+                talker1 = Listener(sim_env, "talker1")
+            if leaky_rate_low > 0:
+                talker2 = TokenBucketTalker(sim_env, "talker2", flow_low, 2, payload_generator,
+                                            time_gen(leaky_rate_low, mean_payload, sim_env), True)
+            else:
+                talker2 = Listener(sim_env, "talker2")
         else:
             talker1 = UnshapedTalker(sim_env, "talker1", flow_high, 3, payload_generator,
                                      time_gen(leaky_rate_high, mean_payload, sim_env), True)
@@ -93,26 +101,26 @@ def foo(arrival_mode, high_priority_leaky_rate, switch_mode):
         sim_env.topology = topology
 
         # optional
-        seed += offset
+        seed = np.random.randint(maxsize)
 
         # 7.
         yield sim_env
 
 
-#simulate_multiple(foo("tbe", 0.5, "tbe"), 10, 100000, "simple")
+#simulate_multiple(foo("shapeless", 0.5, "tbe"), 15, 100000, "simple")
 
-arr_mode = "shapeless"
-simulate_multiple_multiple([foo(arr_mode, 0.5, "lrq"),
-                            foo(arr_mode, 0.5, "tbe"),
-                            foo(arr_mode, 0.5, "shapeless")], 10, 100000, "simple_%s" % arr_mode)
-# simulate_multiple_multiple([foo(0.1, "lrq"),
-#                            foo(0.2, "lrq"),
-#                            foo(0.3, "lrq"),
-#                            foo(0.4, "lrq"),
-#                            foo(0.5, "lrq"),
-#                            foo(0.6, "lrq"),
-#                            foo(0.7, "lrq"),
-#                            foo(0.8, "lrq"),
-#                            foo(0.9, "lrq"),
-#                            foo(0.999, "lrq")], 13, 35000, "simple")
-#
+#arr_mode = "tbe"
+#simulate_multiple_multiple([foo(arr_mode, 0.5, "lrq"),
+#                            foo(arr_mode, 0.5, "tbe"),
+#                            foo(arr_mode, 0.5, "shapeless")], 10, 100000, "simple_%s" % arr_mode)
+
+simulate_multiple_multiple([foo("tbe", 0.1, "lrq"),
+                            foo("tbe", 0.2, "lrq"),
+                            foo("tbe", 0.3, "lrq"),
+                            foo("tbe", 0.4, "lrq"),
+                            foo("tbe", 0.5, "lrq"),
+                            foo("tbe", 0.6, "lrq"),
+                            foo("tbe", 0.7, "lrq"),
+                            foo("tbe", 0.8, "lrq"),
+                            foo("tbe", 0.9, "lrq"),
+                            foo("tbe", 1, "lrq")], 10, 100000, "simple_tbe_lrq_row")
