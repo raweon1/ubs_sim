@@ -11,7 +11,7 @@ from simulation.Wrapper import simulate_multiple
 def payload_gen(sim_env: SimulationEnvironment, mean):
     rnd = sim_env.random
     while True:
-        yield rnd.uniform(0, mean * 2)
+        yield rnd.uniform(2, mean * 2)
 
 
 def foo():
@@ -81,8 +81,8 @@ def foo():
         talker4.add_flow(f16, 0, payload_generator)
 
         priority_map = PriorityMap(8)
-        switch1 = UBSSwitch(sim_env, "switch1", priority_map, "lrq", True)
-        switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "lrq", False)
+        switch1 = UBSSwitch(sim_env, "switch1", priority_map, "tbe", True)
+        switch2 = UBSSwitch2(sim_env, "switch2", priority_map, "tbe", False)
 
         listener = Listener(sim_env, "listener")
 
@@ -95,4 +95,4 @@ def foo():
         yield sim_env
 
 
-simulate_multiple(foo(), 16, 50000, "scenario1")
+simulate_multiple(foo(), 10, 100000, "scenario1_tbe")

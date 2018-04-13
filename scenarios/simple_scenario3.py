@@ -24,6 +24,21 @@ def payload_gen(sim_env: SimulationEnvironment, mean):
         yield round(rnd.uniform(2, mean * 2 - 2))
 
 
+def payload_gen_2(mean):
+    while True:
+        yield mean
+
+
+def payload_gen3(sim_env: SimulationEnvironment, mean):
+    rnd = sim_env.random
+    while True:
+        tmp = rnd.uniform(0, 11)
+        if tmp < 5:
+            yield 250
+        else:
+            yield 1250
+
+
 def foo(interleaved: bool, high_priority_leaky_rate, switch_mode):
     """
     Two Talker, three Flows. One Talker has 2 Flows with leaky_rate = high_priority_leaky_rate / 2 each
@@ -48,23 +63,24 @@ def foo(interleaved: bool, high_priority_leaky_rate, switch_mode):
         sim_env = SimulationEnvironment("%s-%0.2f-%s" % (str(interleaved), high_priority_leaky_rate, switch_mode), seed)
 
         # 2.
-        path1 = Path("talker1", "switch", "listener")
-        path1.append_path("talker12", "switch", "listener")
-        path2 = Path("talker2", "switch", "listener")
+        path1 = Path("talker1", "switch1", "switch2", "listener")
+        path1.append_path("talker12", "switch1", "switch2", "listener")
+        path2 = Path("talker2", "switch1", "switch2", "listener")
         # 3.
         mean_payload = 750
         bandwidth = 1000
         burstiness = mean_payload * 2 - 2
 
         leaky_rate_high = (bandwidth * (high_priority_leaky_rate - 0)) / 2
-        leaky_rate_low = bandwidth * ((1 - high_priority_leaky_rate) - 0)
+        leaky_rate_low = bandwidth * ((0.98 - high_priority_leaky_rate) - 0)
         flow_high1 = Flow(1, path1, leaky_rate_high, burstiness)
         flow_high2 = Flow(2, path1, leaky_rate_high, burstiness)
         flow_low = Flow(3, path2, leaky_rate_low, burstiness)
 
         # 4.
-
         payload_generator = payload_gen(sim_env, mean_payload)
+        # payload_generator = payload_gen_2(mean_payload)
+        # payload_generator = payload_gen3(sim_env, mean_payload)
 
         talker1 = Talker(sim_env, "talker1", True)
         talker12 = Talker(sim_env, "talker12", True)
@@ -81,13 +97,14 @@ def foo(interleaved: bool, high_priority_leaky_rate, switch_mode):
             talker2.add_flow(flow_low, 2, payload_generator)
 
         priority_map = PriorityMap(8)
-        switch = UBSSwitch(sim_env, "switch", priority_map, switch_mode, True)
-
+        switch1 = UBSSwitch(sim_env, "switch1", priority_map, switch_mode, True)
+        switch2 = UBSSwitch(sim_env, "switch2", priority_map, switch_mode, True)
         listener = Listener(sim_env, "listener")
 
         # 5.
-        topology = Topology(talker1, talker2, talker12, switch, listener)
-        topology.multi_connect("switch", bandwidth, "talker1", "talker12", "talker2", "listener")
+        topology = Topology(talker1, talker2, talker12, switch1, switch2, listener)
+        topology.multi_connect("switch1", bandwidth, "talker1", "talker12", "talker2", "switch2")
+        topology.connect("switch2", "listener", bandwidth=bandwidth)
 
         # 6.
         sim_env.topology = topology
@@ -99,13 +116,13 @@ def foo(interleaved: bool, high_priority_leaky_rate, switch_mode):
         yield sim_env
 
 
-#simulate_multiple(foo("shapeless", 0.5, "tbe"), 15, 100000, "simple")
+# simulate_multiple(foo("shapeless", 0.5, "tbe"), 15, 100000, "simple")
 
 arr_mode = "lrq"
 simulate_multiple_multiple([foo(True, 0.5, arr_mode),
-                            foo(False, 0.5, arr_mode)], 10, 100000, "simple2_%s" % arr_mode)
+                            foo(False, 0.5, arr_mode)], 10, 100000, "simple3_%s" % arr_mode)
 
-#simulate_multiple_multiple([foo("tbe", 0.1, "lrq"),
+# simulate_multiple_multiple([foo("tbe", 0.1, "lrq"),
 #                            foo("tbe", 0.2, "lrq"),
 #                            foo("tbe", 0.3, "lrq"),
 #                            foo("tbe", 0.4, "lrq"),

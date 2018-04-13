@@ -185,11 +185,12 @@ class UBSScheduler(Scheduler):
                 frame: Frame = shaped_queue.popleft()
                 frame_bit_len = frame.__len__() * 8
                 flow_index = frame.flow.id
+                flow_leaky_rate = frame.flow.leaky_rate * (1 + frame.hop / 100)
                 time = state[flow_index]
                 if not self.env.now >= time:
                     yield self.env.timeout(time - self.env.now)
                 self.pseudo_queue_append(shaped_queue_index, shaped_queue, pseudo_queue, pseudo_queue_index, frame)
-                state[flow_index] = self.env.now + (frame_bit_len / frame.flow.leaky_rate)
+                state[flow_index] = self.env.now + (frame_bit_len / flow_leaky_rate)
             else:
                 try:
                     self.process_shaped_queues_state[shaped_queue_index] = True
@@ -206,7 +207,7 @@ class UBSScheduler(Scheduler):
                 frame: Frame = shaped_queue.popleft()
                 frame_bit_len = frame.__len__() * 8
                 flow_index = frame.flow.id
-                leaky_rate = frame.flow.leaky_rate
+                flow_leaky_rate = frame.flow.leaky_rate * (1 + frame.hop / 100)
                 burstiness = frame.flow.burstiness * 8
                 time = time_state[flow_index]
                 try:
@@ -214,11 +215,11 @@ class UBSScheduler(Scheduler):
                 except KeyError:
                     burst_state[flow_index] = burstiness
                     burst = burst_state[flow_index]
-                if not burst + (self.env.now - time) * leaky_rate >= frame_bit_len:
+                if not burst + (self.env.now - time) * flow_leaky_rate >= frame_bit_len:
                     # print((frame_bit_len - (burst + (self.env.now - time) * leaky_rate)) / leaky_rate)
-                    yield self.env.timeout((frame_bit_len - (burst + (self.env.now - time) * leaky_rate)) / leaky_rate)
+                    yield self.env.timeout((frame_bit_len - (burst + (self.env.now - time) * flow_leaky_rate)) / flow_leaky_rate)
                 self.pseudo_queue_append(shaped_queue_index, shaped_queue, pseudo_queue, pseudo_queue_index, frame)
-                burst_state[flow_index] = min(burstiness, burst + (self.env.now - time) * leaky_rate) - frame_bit_len
+                burst_state[flow_index] = min(burstiness, burst + (self.env.now - time) * flow_leaky_rate) - frame_bit_len
                 # if burst_state[flow_index] < -10:
                 #   print(round(burst_state[flow_index], 2))
                 #   print("%f %f %f %f" % (burst, (self.env.now - time) * leaky_rate, frame_bit_len, frame_bit_len / 8))

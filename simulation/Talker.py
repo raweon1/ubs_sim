@@ -82,7 +82,7 @@ class Talker(Node):
         :param payload_generator:
         """
         while True:
-            frame = Frame(self.env.frame_id(), flow, payload_generator.__next__(), priority)
+            frame = Frame(self.env.frame_id(), flow, payload_generator.__next__(), priority, start_time=self.env.now)
             # frame = Frame(self.env.frame_id(), flow, 1500, priority)
             self.queue.append(frame)
             if self.sleeping:
@@ -192,7 +192,7 @@ class TokenBucketTalker(Node):
             -> we send frames in a leaky bucket pattern
         """
         while True:
-            frame = Frame(self.env.frame_id(), flow, payload_generator.__next__(), priority)
+            frame = Frame(self.env.frame_id(), flow, payload_generator.__next__(), priority, start_time=self.env.now)
             # frame = Frame(self.env.frame_id(), flow, 1500, priority)
             self.queue.append(frame)
             if self.sleeping:

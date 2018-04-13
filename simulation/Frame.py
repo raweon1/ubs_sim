@@ -2,7 +2,7 @@ from simulation import Flow
 
 
 class Frame(object):
-    def __init__(self, frame_id: int, flow: Flow, payload: int, priority: int, header: int = 0):
+    def __init__(self, frame_id: int, flow: Flow, payload: int, priority: int, start_time: int = -1, header: int = 0):
         """
         :param frame_id:
         :param flow:
@@ -18,7 +18,8 @@ class Frame(object):
 
         # value which stores the last traffic class used to send this frame (UBS needs this)
         self.traffic_class = priority
-        self.start_time = -1
+        self.start_time = start_time
+        self.hop = 0
         self.delays = dict()
 
     def on_hop(self, sender_address: str, receiver_address: str, time: int):

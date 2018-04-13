@@ -37,9 +37,8 @@ class Node(object):
         frame.priority is used. important for UBS
         :return: Sending object
         """
+        frame.hop += 1
         # Zeitpunkt zu dem der Frame zum ersten mal gesendet wird
-        if frame.start_time < 0:
-            frame.start_time = self.env.now
         if traffic_class is not None:
             frame.traffic_class = traffic_class
         else:
